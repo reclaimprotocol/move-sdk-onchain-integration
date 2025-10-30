@@ -372,14 +372,15 @@ module reclaim::reclaim {
         let mut byte_offset = 0;
         let mut i = 0;
         let complete_hash_len = vector::length(&complete_hash);
-        while (i < minimum_witnesses) {
+		while (i < minimum_witnesses) {
             // Extract four bytes at byte_offset from complete_hash
-            let mut random_seed = 0;
+			let mut random_seed = 0;
             let mut j = 0;
             while (j < 4) {
                 let byte_index = (byte_offset + j) % complete_hash_len;
                 let byte_value = *vector::borrow(&complete_hash, byte_index) as u64;
-                random_seed =  (byte_value << ((8 * j as u8)));
+				// Accumulate 4 bytes into a 32-bit seed using little-endian packing
+				random_seed = random_seed | (byte_value << ((8 * j as u8)));
                 j = j + 1;
             };
 
@@ -447,7 +448,7 @@ module reclaim::reclaim {
         bytes_to_hex(&hash_bytes)
     }
 
-    fun recover_signers_of_signed_claim(signed_claim: SignedClaim): vector<vector<u8>> {
+	fun recover_signers_of_signed_claim(signed_claim: SignedClaim): vector<vector<u8>> {
         let mut expected = vector<vector<u8>>[];
         let endl = b"\n".to_string();
         let mut message = b"".to_string();
@@ -462,11 +463,13 @@ module reclaim::reclaim {
         message.append(endl);
         message.append(complete_claim_data_padding);
 
-        let mut eth_msg = b"\x19Ethereum Signed Message:\n".to_string();
-
-        eth_msg.append(b"122".to_string());
-        eth_msg.append(message);
-        let msg = string::as_bytes(&eth_msg);
+		let mut eth_msg = b"\x19Ethereum Signed Message:\n".to_string();
+		// Compute message byte length dynamically and append its decimal representation
+		let msg_len = vector::length(string::as_bytes(&message));
+		let msg_len_str = u64_to_decimal_string(msg_len);
+		eth_msg.append(msg_len_str);
+		eth_msg.append(message);
+		let msg = string::as_bytes(&eth_msg);
         
         let mut i = 0;
         while ( i < vector::length(&signed_claim.signatures)){
@@ -478,6 +481,30 @@ module reclaim::reclaim {
         
         expected
     }
+
+	// Converts an unsigned integer to its decimal string representation
+	fun u64_to_decimal_string(mut n: u64): string::String {
+		let mut digits = vector::empty<u8>();
+		if (n == 0) {
+			vector::push_back(&mut digits, 48); // '0'
+		} else {
+			while (n > 0) {
+				let d = (n % 10) as u8;
+				vector::push_back(&mut digits, 48 + d); // push least-significant digit
+				n = n / 10;
+			};
+			// reverse in place to get the correct order
+			let mut i = 0;
+			let mut j = vector::length(&digits);
+			if (j > 0) { j = j - 1; };
+			while (i < j) {
+				vector::swap(&mut digits, i, j);
+				i = i + 1;
+				j = j - 1;
+			};
+		};
+		string::utf8(digits)
+	}
 
     public fun fetch_epoch(manager: &ReclaimManager): &Epoch {
         vector::borrow(&manager.epochs, (manager.current_epoch - 1) as u64)
