@@ -7,7 +7,7 @@ edition = "2024.alpha" # To use the Move 2024 edition, currently in alpha
 published-at = "0xbe2a8eb639d62527db3879a56ba3f400ad01f1633a5f665098b39b55e95e42a2"
 
 [dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet-v1.59.1" }
 
 
 
